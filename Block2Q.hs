@@ -38,7 +38,12 @@ using list comprehension.
 -}
 oneone, oneone' :: [Int] -> [Int]
 oneone ns = [ n+1 | n <- ns,  n `mod` 2 == 0 ]
-oneone' = undefined
+-- If the head is even, add one and include it in the list
+-- Otherwise, don't include it in the list
+-- ALTERNATIVE from answers: map (+1) . filter ((==0) . (`mod` 2))
+oneone' = foldr mpo []
+        where mpo y ys | even y    = y+1:ys
+                       | otherwise = ys
 
 {-
 ### Q1.2
@@ -49,7 +54,12 @@ using list comprehension.
 onetwo, onetwo' :: [String] -> [Bool]
 onetwo css = [(fromEnum c) `mod` 2 == 1 |
               cs <- css, length cs > 1, c <- cs, c `elem` ['a'..'z']]
-onetwo' = undefined
+-- for every lowercase character in a list of Strings, return whether the ordinal value is even or odd
+-- 1. concatinate the strings together to form a single string (this also eliminates the test for length>1)
+-- 2. filter out any characters not in a-z
+-- 3. map is odd to each char
+onetwo' css = map (odd . fromEnum) $ filter (\x -> x `elem` ['a'..'z']) (concat css)
+       
 
 {-
 ### Q1.3
@@ -63,12 +73,13 @@ rule, and  `evenparity`, a function pipeline  to compute the parity.
 bitstring2int :: [Bool] -> Int
 bitstring2int = foldl (\ n b -> 2*n + if b then 1 else 0) 0
 
+-- Returns true if the number of Trues are even
 parity :: [Bool] -> Bool
 parity = (==0) . (`mod` 2) . length . filter (== True) 
 
 onethree, onethree' :: [[Bool]] -> [Int]
 onethree = map bitstring2int . filter parity
-onethree' = undefined
+onethree' bitsList = [bitstring2int x | x <- bitsList, parity x]
 
 
 {-
@@ -101,6 +112,9 @@ ePbs2i bs | parity bs = bitstring2int bs
 What happens if you evaluate `ePbs2i [True, False, True, False]` and
 `ePbs2i [True, False, False, False]`?
 
+-- The first returns 10
+-- The second throws an Exception because the pattern is non-exhaustive
+
 
 #### Q2.2
 
@@ -109,7 +123,9 @@ returns a `Maybe Int` instead.  It should return `Nothing` if its
 input is `Nothing` or if the value has odd parity.
 -}
 ePbs2iM :: Maybe [Bool] -> Maybe Int
-ePbs2iM = undefined
+ePbs2iM Nothing = Nothing
+ePbs2iM (Just bs) | parity bs = Just $ bitstring2int bs
+                  | otherwise = Nothing
 {-
 Now suppose that we want to use the result of `ePbs2i'` as the input
 to another function, such as:
@@ -122,7 +138,9 @@ that it expects and returns a `Maybe Int`.  Then we can form the
 pipeline `doubleOddM . ePbs2iM`.
 -}
 doubleOddM :: Maybe Int -> Maybe Int
-doubleOddM = undefined
+doubleOddM Nothing = Nothing
+doubleOddM (Just mi) | odd mi    = Just $ mi*2
+                     | otherwise = Nothing
 
 {-
 The solution looks a little ugly!  Later we will see that Haskell has
@@ -146,7 +164,7 @@ doepM [True, True, False] == "Ooops!" -- even number
 ```
 -}
 doepM :: [Bool] -> String
-doepM = undefined
+doepM bs = maybe "Ooops!" show $ doubleOddM $ ePbs2iM (Just bs)
 
 {-
 ### Either types
@@ -188,8 +206,13 @@ represents an error it should be preceded with the string "ERROR: ".
 -}
 doubleOddE :: Error Int -> Error Int
 doepE :: [Bool] -> String
-doubleOddE = undefined
-doepE = undefined
+doubleOddE (Left msg) = Left msg
+doubleOddE (Right mi) | odd mi    = Right $ mi*2
+                      | otherwise = Left "Number was even"
+
+-- if there is an error, append the error message
+-- otherwise, show the value
+doepE bs = either ("error: " ++) show $ doubleOddE $ ePbs2iE (Right bs)
 
 {-
 ## Q3: Laziness
