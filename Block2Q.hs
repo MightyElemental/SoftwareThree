@@ -1,4 +1,5 @@
-module Block2 where
+module Block2Q where
+import Data.List ( intersect )
 
 {-
 # SOF3/Block 2
@@ -37,7 +38,7 @@ Rewrite the function `oneone` as the function `oneone'`, _without_
 using list comprehension.
 -}
 oneone, oneone' :: [Int] -> [Int]
-oneone ns = [ n+1 | n <- ns,  n `mod` 2 == 0 ]
+oneone ns = [ n+1 | n <- ns,  even n ]
 -- If the head is even, add one and include it in the list
 -- Otherwise, don't include it in the list
 -- ALTERNATIVE from answers: map (+1) . filter ((==0) . (`mod` 2))
@@ -52,14 +53,14 @@ Rewrite the function `onetwo` as the function `onetwo'`, _without_
 using list comprehension.
 -}
 onetwo, onetwo' :: [String] -> [Bool]
-onetwo css = [(fromEnum c) `mod` 2 == 1 |
+onetwo css = [fromEnum c `mod` 2 == 1 |
               cs <- css, length cs > 1, c <- cs, c `elem` ['a'..'z']]
 -- for every lowercase character in a list of Strings, return whether the ordinal value is even or odd
 -- 1. concatinate the strings together to form a single string (this also eliminates the test for length>1)
 -- 2. filter out any characters not in a-z
 -- 3. map is odd to each char
 onetwo' css = map (odd . fromEnum) $ filter (\x -> x `elem` ['a'..'z']) (concat css)
-       
+
 
 {-
 ### Q1.3
@@ -75,7 +76,7 @@ bitstring2int = foldl (\ n b -> 2*n + if b then 1 else 0) 0
 
 -- Returns true if the number of Trues are even
 parity :: [Bool] -> Bool
-parity = (==0) . (`mod` 2) . length . filter (== True) 
+parity = (==0) . (`mod` 2) . length . filter (== True)
 
 onethree, onethree' :: [[Bool]] -> [Int]
 onethree = map bitstring2int . filter parity
@@ -105,7 +106,7 @@ sophisticated `Either` type.)
 Consider the following function:
 -}
 ePbs2i :: [Bool] -> Int
-ePbs2i bs | parity bs = bitstring2int bs 
+ePbs2i bs | parity bs = bitstring2int bs
 {-
 #### Q2.1
 
@@ -270,12 +271,30 @@ take 6 nats
 take 4 nats
 ```
 
+*Block2> take 1 nats
+[0]
+*Block2> :sprint nats
+nats = 0 : _
+*Block2> take 6 nats
+[0,1,2,3,4,5]
+*Block2> :sprint nats
+nats = 0 : 1 : 2 : 3 : 4 : 5 : _
+*Block2> take 4 nats
+[0,1,2,3]
+*Block2> :sprint nats
+nats = 0 : 1 : 2 : 3 : 4 : 5 : _
+
 ### Q3.2
 
 What is the base case in each of the recursive definitions of `ones`
 and `nats`?
 
 What is the recursive case?
+-}
+
+{-
+The base case for ones is 1, and for nats is 0.
+The recursive case is the whole list for ones, and succ mapped to the whole list for nats.
 -}
 
 {-
@@ -321,8 +340,10 @@ ones' = fix (1:)
 {-
 Define a new version of `nats`, `nats'`, using `fix`. 
 -}
+
 nats' :: [Integer]
-nats' = undefined
+-- Add one to every number in the list and append a zero to the start
+nats' = fix ( (0:) . map (+1) )
 
 {-
 #### Q3.4
@@ -342,7 +363,12 @@ than `3`: it takes a very long time to evaluate (`ackermann 4 2` has
 Express `ackermann` using `fix`.
 -}
 ackermann' :: Integer -> Integer -> Integer
-ackermann' = undefined
+-- aux :: (Num t1, Num t2) => (t1 -> t2 -> t2) -> t1 -> t2 -> t2
+-- The ackermann auxiliary function will be passed into itself by the fix function
+ackermann' m n = fix aux m n
+               where aux _ 0 n = n+1
+                     aux f m 0 = f (m-1) 1
+                     aux f m n = f (m-1) (f m (n-1))
 
 {-
 ### Q3.4
@@ -350,8 +376,11 @@ ackermann' = undefined
 Redefine `bottom` using `fix`. (Again, see the talk on Laziness for
 the original definition of `bottom`.)
 -}
+
+-- bottom is a computation that never completes successfully.
+
 bottom :: a
-bottom = undefined
+bottom = fix id
 
 {-
 ### Q3.5
@@ -365,7 +394,11 @@ For example, the result when applied to `[9,8,7,6,5,4,3,2]++ones`
 should be `1`.
 -}
 findPlateau :: Eq a => [a] -> a
-findPlateau = undefined
+-- First, pair every element with the element next in the list
+-- Second, filter out only tuples where the values contained are equal
+-- Third, select only one of the values from the tuple
+-- Finally, select the head of the new list
+findPlateau xs = head [x | (x,y) <- zip xs (tail xs), x==y]
 
 {-
 Look up the function `iterate`.  What does the function `mystery3_5`
@@ -378,6 +411,15 @@ mystery3_5 :: Eq a => (a -> a) -> a -> a
 mystery3_5 = (findPlateau .) . iterate
 
 {-
+  tz halves the value and flips the polarity
+  iterate tz will half each subsequent element and flip polarity from the previous
+  mystery3_5 will calculate the iterate function as many times as it needs to find the plateau. 
+  mystery3_5 finds the first duplicate value of the function applied.
+  i.e. find the converge point of the function.
+  Because of this, mystery3_5 tz 99 will always return 0.
+-}
+
+{-
 ### Q3.6
 
 Write an expression to generate the list of **Mersenne numbers**,
@@ -385,7 +427,7 @@ positive integers, one less than a positive integer power of 2, in
 order.
 -}
 mersenne :: [Int]
-mersenne = undefined
+mersenne = [2^x-1 | x <- [0..]]
 
 
 {-
@@ -406,10 +448,30 @@ eratosthenes :: [Int]
 eratosthenes = sieve (map Just [2..])
   where
     sieve (Just n  : ns) = n : sieve (zipWith ($) mark_n ns)
-      where mark_n = cycle (replicate (n-1) id ++ [const Nothing]) 
+      where mark_n = cycle (replicate (n-1) id ++ [const Nothing])
     sieve (Nothing : ns) = sieve ns
+
+
 mersennePrime :: [Int]
-mersennePrime = undefined
+mersennePrime = intersectOrd mersenne eratosthenes
+  where
+    intersectOrd []     _      = []
+    intersectOrd _      []     = []
+    intersectOrd (x:xs) (y:ys) | x < y  = intersectOrd xs (y:ys)
+                               | x == y = x : intersectOrd xs ys
+                               | x > y  = intersectOrd (x:xs) ys
+
+-- My own improved method because the question annoyed me
+
+isqrt :: Int -> Int
+isqrt = floor . sqrt . fromIntegral
+
+isPrime :: Int -> Bool
+isPrime k = (k > 1) && null [ x | x <- [2..isqrt k], k `mod` x == 0]
+
+mersennePrime' :: [Int]
+mersennePrime' = [x | x <- mersenne, isPrime x]
+
 {-
 **Warning!** When testing this, it is feasible to generate the first
 five Mersenne Primes, but getting the sixth takes quite a while!
