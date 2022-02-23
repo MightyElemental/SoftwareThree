@@ -553,7 +553,7 @@ vm1_2' = Coin `leadsto` (Choc `leadsto` (Coin `leadsto` (Choc `leadsto` stop)))
 Redefine `vm1_e` using the new operators.
 -}
 vm1_e' :: VM
-vm1_e' = undefined
+vm1_e' = Coin `leadsto` (Choc `leadsto` vm1_e')
 
 {-
 The trees `vm1_2` and `vm1_e` do not branch.
@@ -577,7 +577,9 @@ machine behaviour that can only be halted between transactions.  You
 may either do it directly, or using the operators.
 -}
 vm1_h' :: VM
-vm1_h' = undefined
+vm1_h' = (Coin `leadsto` (Choc `leadsto` vm1_h))
+         `branch`
+         (Halt `leadsto` stop)
 
 {-
 ### Q4.3
@@ -589,15 +591,32 @@ of `take::Int->[a]->[a]` to `Tree`.
 Write a function to cut off a tree at a given depth, so that the
 result can be displayed.
 -}
+
+-- A tree contains a list of subtrees so we need to calculate each element of each tree
+-- We will build a new tree based on the original.
+-- If the take number is 0, stop building the tree
 takeTree :: Int -> Tree a -> Tree a
-takeTree = undefined
+takeTree 0 _ = stop
+takeTree n (Tree ts) = Tree (map takeTree' ts)
+  where
+    takeTree' (element, tree) = (element, takeTree (n-1) tree)
 
 {-
 ### Q4.4
 Write a function to count the number of nodes in a finite tree.
 -}
+
+testTree :: Tree VM_Event
+testTree = (Coin `leadsto` (Choc `leadsto` stop))
+           `branch`
+           (Coin `leadsto` (Fudj `leadsto` stop))
+
+-- A tree contains a list of subtrees so we need to calculate each element of each tree
+-- For each tree, we add one. We then sum all the counts together.
 countTree :: Tree a -> Int
-countTree = undefined
+countTree (Tree ts) = sum (map countTree' ts)
+  where
+    countTree' (_,t) = 1 + countTree t
 
 {-
 ### Q4.5
@@ -621,8 +640,11 @@ and replacing according to the function `length . show` gives
 Tree [(4, Tree [(4, Tree [(4, Tree [(4, Tree [])])])])]
 ```
 -}
+-- Similar to takeTree but with no depth limit and apply a function to each element
 mapTree :: (a -> b) -> Tree a   -> Tree b
-mapTree = undefined
+mapTree f (Tree ts) = Tree (map mapTree' ts)
+  where
+    mapTree' (e,t) = (f e, mapTree f t)
 
 {-
 Being able to map over a structure is a very common problem, so much
