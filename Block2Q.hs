@@ -671,6 +671,57 @@ build a similar library for "Noughts-and-Crosses", also known as
 in the current state; in this case you should just ignore the play.
 -}
 
+-- Three enums to represent the row / column
+data Coord = Zero | One | Two deriving (Eq, Enum, Show)
+-- Three enums to represent the possible states of the tiles
+data TileType = Blank | Nought | Cross deriving (Eq, Enum, Show)
+
+newtype Game = Game (Coord -> Coord -> TileType) -- two coords yeilds the current tile
+
+data GameState = GameState Game TileType -- the state holds the current game and the next player's tile
+
+move :: GameState -> (Coord, Coord) -> GameState
+move gs@(GameState (Game g) tt) (x,y) -- tt is the current symbol
+  | g x y == Blank = GameState (Game newMove) nextTt -- tile was blank, fill with new tile
+  | otherwise      = gs -- tile was not blank, do not move
+  where
+    newMove x' y' | x==x' && y==y' = tt -- set the current tile to the correct tile type
+                  | otherwise      = g x' y' -- keep other tiles the same
+    nextTt = case tt of -- toggle the next move
+      Nought -> Cross
+      Cross  -> Nought
+      Blank  -> Blank -- should never be blank, but here just in case
+
+-- Create an empty game
+startingState :: GameState
+startingState = GameState (Game (const $ const Blank)) Nought
+
+-- Generate a list of states with each move
+playGame :: [(Coord, Coord)] -> [GameState]
+playGame = scanl move startingState
+
+-- Nothing means nobody has won
+winner :: GameState -> Maybe TileType
+winner (GameState (Game g) _)
+  | completeLine Nought = Just Nought
+  | completeLine Cross  = Just Cross
+  | otherwise           = Nothing
+  where
+    completeLine tt = completeRow tt || completeCol tt || completeDiag tt -- player can win by completing a row, a column, or a diagonal
+    completeRowX tt xPos = and [tt == g x y | (x,y) <- [(xPos,Zero),(xPos,One),(xPos,Two)]] -- saves a lot of repeated code
+    completeColY tt yPos = and [tt == g x y | (x,y) <- [(Zero,yPos),(One,yPos),(Two,yPos)]] -- saves a lot of repeated code
+    completeRow tt = or [completeRowX tt xPos | xPos <- [Zero,One,Two]]
+    completeCol tt = or [completeColY tt yPos | yPos <- [Zero,One,Two]]
+    completeDiag tt = and [tt == g x y | (x,y) <- [(Zero,Zero),(One,One),(Two,Two)]] || and [tt == g x y | (x,y) <- [(Zero,Two),(One,One),(Two,Zero)]]
+
+-- Display which player won
+-- Blank if no player won
+playToWin :: [(Coord, Coord)] -> TileType
+playToWin gs | null victor = Blank
+             | otherwise   = head victor
+             where 
+               victor = [win | Just win <- map winner (playGame gs)]
+
 {-
 ## References
 
