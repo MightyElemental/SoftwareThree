@@ -1,6 +1,5 @@
 module Block3Q where
 import Data.Monoid
-import Distribution.Simple.Utils (xargs)
 
 {-
 # SOF3/Block 3
@@ -203,9 +202,14 @@ Define functions to add, multiply and square elements of `Nat`
 -}
 (/+/), (/*/) :: Nat -> Nat -> Nat
 sqn :: Nat -> Nat
-(/+/) = undefined
-(/*/) = undefined
-sqn   = undefined
+(/+/) Zero n = n -- base case
+(/+/) (Succ m) n = Succ (m /+/ n) -- recursively add
+
+(/*/) Zero _     = Zero -- base case
+(/*/) _ Zero     = Zero -- base case
+(/*/) (Succ m) n = (m /*/ n) /+/ n -- recursively add n for every m
+
+sqn m = m /*/ m
 {-
 ### Q4.2 Unit of multiplication
 Prove that: `∀ n::Nat {oneN /*/ n == n}`.
