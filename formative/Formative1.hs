@@ -314,13 +314,12 @@ testBal = (isTreeBal (nullBR) == True ) &&
 
 
 isTreeBal :: BinTree a -> Bool
+isTreeBal b = all (== head leaves) leaves
+    where leaves = getLeaves b
 
-isTreeBal (Branch l _ r) = deepest l == deepest r
-isTreeBal (Lf _) = True
-
-deepest :: BinTree x -> Int
-deepest (Branch l _ r) = max (deepest l) (deepest r)
-deepest (Lf v) = v
+getLeaves :: BinTree x -> [Int]
+getLeaves (Branch l _ r) = getLeaves l ++ getLeaves r
+getLeaves (Lf v) = [v]
 
 {-
 ### Qxc: [2 mark] 
